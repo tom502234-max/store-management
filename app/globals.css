@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  @apply bg-neutral-100 text-neutral-900 antialiased;
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-neutral-200 bg-white shadow-sm;
+  }
+  /* 모바일은 16px — iOS에서 입력 시 화면이 확대되지 않도록 */
+  .input {
+    @apply h-10 w-full rounded-md border border-neutral-300 bg-white px-3 text-base outline-none transition
+      placeholder:text-neutral-300 focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10 sm:h-9 sm:text-sm;
+  }
+  .input-error {
+    @apply border-red-400 focus:border-red-500 focus:ring-red-500/15;
+  }
+  .btn-primary {
+    @apply inline-flex min-h-11 items-center justify-center rounded-md bg-neutral-900 px-4 text-sm font-medium
+      text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:bg-neutral-300 sm:min-h-10;
+  }
+  .btn-secondary {
+    @apply inline-flex min-h-11 items-center justify-center rounded-md border border-neutral-300 bg-white px-4 text-sm
+      font-medium transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:text-neutral-300 sm:min-h-10;
+  }
+  .btn-ghost {
+    @apply min-h-9 rounded-md px-2.5 text-xs font-medium text-neutral-500 transition hover:bg-neutral-100
+      hover:text-neutral-900;
+  }
+  .btn-soft {
+    @apply inline-flex min-h-10 items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-3 text-sm
+      font-medium text-neutral-700 transition hover:border-neutral-300 hover:bg-neutral-50 sm:min-h-8 sm:text-xs;
+  }
+  .btn-icon {
+    @apply inline-flex size-10 items-center justify-center rounded-md text-neutral-700 transition hover:bg-neutral-100
+      disabled:cursor-not-allowed disabled:text-neutral-300 disabled:hover:bg-transparent sm:size-8;
+  }
+  .chip {
+    @apply inline-flex min-h-9 items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 text-xs
+      transition hover:border-neutral-400 sm:min-h-7;
+  }
+  /* 근무자 행: 좁으면 [이름|시간|버튼] + 계산 결과 줄, 넓으면 한 줄 표 */
+  .worker-grid {
+    @apply grid grid-cols-[minmax(0,1fr)_6.5rem_5.25rem] items-center gap-x-2 gap-y-1.5
+      @2xl:grid-cols-[1.25rem_minmax(0,1fr)_6.5rem_5.75rem_4.75rem_5.75rem_4.25rem];
+  }
+}
