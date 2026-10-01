@@ -1,4 +1,5 @@
 import { Font, pdf } from "@react-pdf/renderer";
+import { BASE_PATH } from "@/lib/basePath";
 import type { Payslip } from "@/lib/payroll";
 import { PayslipDocument } from "./PayslipDocument";
 
@@ -7,7 +8,7 @@ let fontsRegistered = false;
 function ensureFonts() {
   if (fontsRegistered) return;
   // 기기에 설치된 폰트가 아닌, 서버의 같은 폰트 파일을 PDF에 내장 → PC·모바일 결과 동일
-  const base = `${window.location.origin}/fonts`;
+  const base = `${window.location.origin}${BASE_PATH}/fonts`;
   Font.register({
     family: "NotoSansKR",
     fonts: [

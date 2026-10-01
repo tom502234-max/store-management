@@ -23,6 +23,17 @@ PC의 IP 주소(예: `http://192.168.0.10:3000`)를 휴대폰 브라우저에서
 `공유 · 저장` 버튼(여러 PDF를 한 번에 ‘파일에 저장’)은 HTTPS에서만 동작하므로, Vercel 등에 배포하면 휴대폰에서도 표시됩니다.
 HTTP 접속에서도 개별 다운로드와 ZIP 받기는 그대로 사용할 수 있습니다.
 
+## GitHub Pages 배포
+
+`main` 브랜치에 push하면 GitHub Actions(`.github/workflows/deploy-pages.yml`)가 정적 사이트로 빌드해 배포합니다.
+
+- 주소: https://tom502234-max.github.io/store-management/
+- 처음 한 번만: 저장소 **Settings → Pages → Build and deployment → Source**를 **GitHub Actions**로 설정
+- GitHub 무료 플랜은 공개(Public) 저장소에서만 Pages를 쓸 수 있습니다.
+
+HTTPS로 제공되므로 휴대폰에서도 `공유 · 저장` 버튼이 동작합니다.
+근무자 데이터는 서버로 전송되지 않고 각 사용자의 브라우저에만 저장됩니다.
+
 ## 사용법
 
 1. **발급 정보** — 귀속 년월, 지급일, 시급(기본 11,000원), 고용보험 요율(기본 0.9%)

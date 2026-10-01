@@ -1,3 +1,5 @@
+import { BASE_PATH } from "@/lib/basePath";
+
 type PdfJs = typeof import("pdfjs-dist/legacy/build/pdf.mjs");
 
 let pdfjsPromise: Promise<PdfJs> | null = null;
@@ -5,7 +7,7 @@ let pdfjsPromise: Promise<PdfJs> | null = null;
 // 모바일(특히 안드로이드)은 iframe 안에서 PDF를 표시하지 못하므로 pdf.js로 캔버스에 그린다
 function loadPdfJs() {
   pdfjsPromise ??= import("pdfjs-dist/legacy/build/pdf.mjs").then((pdfjs) => {
-    pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+    pdfjs.GlobalWorkerOptions.workerSrc = `${BASE_PATH}/pdf.worker.min.mjs`;
     return pdfjs;
   });
   return pdfjsPromise;
