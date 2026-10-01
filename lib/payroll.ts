@@ -31,6 +31,9 @@ export type Payslip = {
 
 export const DEDUCTION_ITEMS = ["근로소득세", "국민연금", "건강보험", "장기요양보험", "고용보험"] as const;
 
+export const DEFAULT_FILE_NAME_TEMPLATE = "임금명세서_{년월}_{이름}";
+export const DEFAULT_ZIP_NAME_TEMPLATE = "임금명세서_{년월}";
+
 export function defaultSettings(today = new Date()): Settings {
   const prev = new Date(today.getFullYear(), today.getMonth() - 1, 1);
   return {
@@ -38,8 +41,8 @@ export function defaultSettings(today = new Date()): Settings {
     payDate: `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-05`,
     hourlyWage: 11000,
     employmentInsuranceRate: 0.9,
-    fileNameTemplate: "임금명세서_{년월}_{이름}",
-    zipNameTemplate: "임금명세서_{년월}",
+    fileNameTemplate: DEFAULT_FILE_NAME_TEMPLATE,
+    zipNameTemplate: DEFAULT_ZIP_NAME_TEMPLATE,
   };
 }
 
@@ -112,8 +115,9 @@ function monthParts(payMonth: string) {
   return { yyyy, mm, yymm: yyyy.slice(2) + mm };
 }
 
-export function applyTemplate(template: string, settings: Settings, name: string): string {
-  let out = template;
+/** 형식이 비어 있으면 fallback 형식을 쓴다 */
+export function applyTemplate(template: string, settings: Settings, name: string, fallback = template): string {
+  let out = template.trim() || fallback;
   for (const t of FILE_NAME_TOKENS) out = out.split(t.token).join(t.example(settings, name.trim()));
   return sanitizeFileName(out);
 }

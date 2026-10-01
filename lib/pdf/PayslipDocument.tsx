@@ -20,7 +20,6 @@ const s = StyleSheet.create({
   page: {
     paddingTop: 53,
     paddingHorizontal: 24.5,
-    fontFamily: "NotoSansKR",
     fontSize: 10.5,
     color: "#000",
   },
@@ -104,7 +103,7 @@ function SectionHeader({ children }: { children: string }) {
   );
 }
 
-export function PayslipPage({ slip }: { slip: Payslip }) {
+export function PayslipPage({ slip, fontFamily }: { slip: Payslip; fontFamily: string }) {
   const deductions: Record<(typeof DEDUCTION_ITEMS)[number], number | null> = {
     근로소득세: null,
     국민연금: null,
@@ -115,7 +114,7 @@ export function PayslipPage({ slip }: { slip: Payslip }) {
   const [c1, c2, c3, c4] = DETAIL_COLS;
 
   return (
-    <Page size="A4" style={s.page}>
+    <Page size="A4" style={[s.page, { fontFamily }]}>
       <View style={s.frame}>
         {/* 제목 */}
         <View style={{ height: 25 }} />
@@ -223,10 +222,10 @@ export function PayslipPage({ slip }: { slip: Payslip }) {
   );
 }
 
-export function PayslipDocument({ slip }: { slip: Payslip }) {
+export function PayslipDocument({ slip, fontFamily }: { slip: Payslip; fontFamily: string }) {
   return (
     <Document title={`임금명세서 - ${slip.name}`} language="ko">
-      <PayslipPage slip={slip} />
+      <PayslipPage slip={slip} fontFamily={fontFamily} />
     </Document>
   );
 }

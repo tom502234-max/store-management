@@ -1,7 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type KeyboardEvent, type ReactNode } from "react";
 import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type KeyboardEvent,
+  type ReactNode,
+  type RefObject,
+} from "react";
+import {
+  DEFAULT_FILE_NAME_TEMPLATE,
+  DEFAULT_ZIP_NAME_TEMPLATE,
   FILE_NAME_TOKENS,
   applyTemplate,
   defaultSettings,
@@ -17,7 +28,7 @@ import {
   type Worker,
 } from "@/lib/payroll";
 import { downloadBlob, sleep } from "@/lib/download";
-import { getPdf, peekPdf, prunePdfCache, slipKey } from "@/lib/pdf/cache";
+import { getPdf, peekPdf, prefetchPdfs, prunePdfCache, slipKey } from "@/lib/pdf/cache";
 import {
   SAVED_LISTS_KEY,
   deleteList,
@@ -64,10 +75,31 @@ export default function PayslipApp() {
     }
   }, [state]);
 
-  if (!state) {
-    return <div className="p-10 text-sm text-neutral-500">불러오는 중…</div>;
-  }
+  if (!state) return <Skeleton />;
   return <Editor state={state} setState={setState} />;
+}
+
+function PageHeader() {
+  return (
+    <header className="mb-5 sm:mb-8">
+      <h1 className="text-xl font-bold tracking-tight sm:text-2xl">임금명세서 발급</h1>
+      <p className="mt-1 text-sm text-neutral-500">근무시간을 입력하면 근무자별 임금명세서 PDF를 만들어 줍니다.</p>
+    </header>
+  );
+}
+
+// 저장된 입력값을 읽기 전(스크립트 실행 전)에 정적 HTML로 바로 보이는 뼈대
+function Skeleton() {
+  return (
+    <main className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6 lg:pt-10" aria-busy="true">
+      <PageHeader />
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,400px)]">
+        <div className="card h-64 animate-pulse lg:col-start-1" />
+        <div className="card h-96 animate-pulse lg:col-start-1" />
+        <div className="card hidden aspect-[3/4] animate-pulse lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:block" />
+      </div>
+    </main>
+  );
 }
 
 function Editor({ state, setState }: { state: Stored; setState: (fn: (prev: Stored | null) => Stored | null) => void }) {
@@ -98,7 +130,7 @@ function Editor({ state, setState }: { state: Stored; setState: (fn: (prev: Stor
       const s = statuses[i];
       return s.kind === "ok" ? [{ id: w.id, slip: s.slip }] : [];
     });
-    const names = uniqueNames(items.map((x) => applyTemplate(settings.fileNameTemplate, settings, x.slip.name)));
+    const names = uniqueNames(items.map((x) => applyTemplate(settings.fileNameTemplate, settings, x.slip.name, DEFAULT_FILE_NAME_TEMPLATE)));
     return items.map((x, i) => ({ ...x, fileName: `${names[i]}.pdf` }));
   }, [workers, statuses, settings]);
 
@@ -109,13 +141,13 @@ function Editor({ state, setState }: { state: Stored; setState: (fn: (prev: Stor
   );
   const previewItem = exports.find((e) => e.id === selectedId) ?? exports[0] ?? null;
 
-  // 입력이 멈추면 모든 명세서를 미리 만들어 둔다 (버튼을 누르면 바로 저장되도록)
+  // 입력이 멈추면 브라우저가 한가할 때 명세서를 미리 만들어 둔다 (버튼을 누르면 바로 저장되도록)
   const exportKeys = exports.map((e) => slipKey(e.slip)).join("\n");
   useEffect(() => {
     const timer = setTimeout(() => {
       prunePdfCache(new Set(exportKeys.split("\n")));
-      for (const e of exports) getPdf(e.slip).catch(() => undefined);
-    }, 800);
+      void prefetchPdfs(exports.map((e) => e.slip));
+    }, 1000);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exportKeys]);
@@ -301,7 +333,7 @@ function Editor({ state, setState }: { state: Stored; setState: (fn: (prev: Stor
       }
       setBusy("ZIP 압축 중…");
       const blob = await zip.generateAsync({ type: "blob" });
-      downloadBlob(blob, `${applyTemplate(settings.zipNameTemplate, settings, "")}.zip`);
+      downloadBlob(blob, `${applyTemplate(settings.zipNameTemplate, settings, "", DEFAULT_ZIP_NAME_TEMPLATE)}.zip`);
     });
 
   const shareAll = async () => {
@@ -353,10 +385,7 @@ function Editor({ state, setState }: { state: Stored; setState: (fn: (prev: Stor
 
   return (
     <main className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6 lg:pt-10">
-      <header className="mb-5 sm:mb-8">
-        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">임금명세서 발급</h1>
-        <p className="mt-1 text-sm text-neutral-500">근무시간을 입력하면 근무자별 임금명세서 PDF를 만들어 줍니다.</p>
-      </header>
+      <PageHeader />
 
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,400px)]">
         {/* 1. 발급 정보 */}
@@ -657,14 +686,29 @@ function Editor({ state, setState }: { state: Stored; setState: (fn: (prev: Stor
                   ref={templateRef}
                   className="input font-mono"
                   value={settings.fileNameTemplate}
+                  placeholder={DEFAULT_FILE_NAME_TEMPLATE}
                   onChange={(e) => setSettings({ fileNameTemplate: e.target.value })}
                   autoCapitalize="off"
                   autoCorrect="off"
                   spellCheck={false}
                 />
                 <span className="shrink-0 text-sm text-neutral-400">.pdf</span>
+                {settings.fileNameTemplate !== DEFAULT_FILE_NAME_TEMPLATE && (
+                  <button
+                    type="button"
+                    className="btn-ghost shrink-0"
+                    onClick={() => setSettings({ fileNameTemplate: DEFAULT_FILE_NAME_TEMPLATE })}
+                  >
+                    기본값
+                  </button>
+                )}
               </div>
             </Field>
+            {settings.fileNameTemplate.trim() && !settings.fileNameTemplate.includes("{이름}") && (
+              <p className="text-xs text-amber-700">
+                파일명에 {"{이름}"}이 없으면 모든 근무자의 파일명이 같아져 뒤에 (2), (3)이 붙습니다.
+              </p>
+            )}
             <div className="flex flex-wrap items-center gap-2">
               <span className="w-full text-xs text-neutral-500 sm:w-auto">변수 넣기</span>
               {FILE_NAME_TOKENS.map((t) => (
@@ -683,7 +727,7 @@ function Editor({ state, setState }: { state: Stored; setState: (fn: (prev: Stor
             <div className="rounded-lg bg-neutral-50 px-3 py-2.5 text-sm">
               <span className="text-neutral-500">미리보기 </span>
               <span className="break-all font-medium">
-                {applyTemplate(settings.fileNameTemplate, settings, sampleName)}.pdf
+                {applyTemplate(settings.fileNameTemplate, settings, sampleName, DEFAULT_FILE_NAME_TEMPLATE)}.pdf
               </span>
             </div>
 
@@ -828,6 +872,8 @@ function Preview({
 }) {
   const [blob, setBlob] = useState<Blob | null>(null);
   const [failed, setFailed] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+  const visible = useInView(sectionRef);
   const key = item ? slipKey(item.slip) : "";
 
   useEffect(() => {
@@ -835,6 +881,8 @@ function Preview({
       setBlob(null);
       return;
     }
+    // 모바일처럼 미리보기가 화면 밖에 있으면 그리지 않는다 (pdf.js 로딩도 미룸)
+    if (!visible) return;
     const cached = peekPdf(item.slip);
     if (cached) {
       setBlob(cached);
@@ -857,12 +905,12 @@ function Preview({
       clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  }, [key, visible]);
 
   const stale = !!item && !!blob && peekPdf(item.slip) !== blob;
 
   return (
-    <section className="card p-4">
+    <section ref={sectionRef} className="card p-4">
       <div className="mb-3 flex items-center gap-2">
         <h2 className="shrink-0 text-sm font-semibold">미리보기</h2>
         {items.length > 0 && item ? (
@@ -958,6 +1006,22 @@ function PdfCanvas({ blob, dimmed, children }: { blob: Blob | null; dimmed: bool
       )}
     </div>
   );
+}
+
+function useInView(ref: RefObject<HTMLElement | null>) {
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (!("IntersectionObserver" in window)) {
+      setInView(true);
+      return;
+    }
+    const io = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), { rootMargin: "200px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ref]);
+  return inView;
 }
 
 function Section({

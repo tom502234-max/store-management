@@ -21,6 +21,21 @@ body {
     @apply h-10 w-full rounded-md border border-neutral-300 bg-white px-3 text-base outline-none transition
       placeholder:text-neutral-300 focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10 sm:h-9 sm:text-sm;
   }
+  /* 날짜 입력칸: 모바일(특히 iOS Safari)의 기본 최소 너비 때문에 부모 밖으로 넘치는 문제 방지 */
+  input[type="date"].input {
+    @apply block max-w-full min-w-0;
+  }
+  @supports (-webkit-touch-callout: none) {
+    /* iOS 전용: 기본 모양을 끄면 너비 지정이 적용된다. 탭하면 날짜 선택기는 그대로 열림 */
+    input[type="date"].input {
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    input[type="date"].input::-webkit-date-and-time-value {
+      margin: 0;
+      text-align: left;
+    }
+  }
   .input-error {
     @apply border-red-400 focus:border-red-500 focus:ring-red-500/15;
   }

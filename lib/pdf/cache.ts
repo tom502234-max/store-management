@@ -28,6 +28,25 @@ export function getPdf(slip: Payslip): Promise<Blob> {
   return p;
 }
 
+const idle = () =>
+  new Promise<void>((resolve) => {
+    if ("requestIdleCallback" in window) window.requestIdleCallback(() => resolve(), { timeout: 1000 });
+    else setTimeout(resolve, 50);
+  });
+
+let prefetchToken = 0;
+
+/** 브라우저가 한가할 때 하나씩 미리 만든다(입력 중 버벅임 방지). 새로 호출하면 이전 예약은 멈춘다 */
+export async function prefetchPdfs(slips: Payslip[]) {
+  const token = ++prefetchToken;
+  for (const slip of slips) {
+    if (ready.has(slipKey(slip))) continue;
+    await idle();
+    if (token !== prefetchToken) return;
+    await getPdf(slip).catch(() => undefined);
+  }
+}
+
 export function peekPdf(slip: Payslip): Blob | undefined {
   return ready.get(slipKey(slip));
 }

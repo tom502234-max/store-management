@@ -2,13 +2,14 @@ import { BASE_PATH } from "@/lib/basePath";
 
 type PdfJs = typeof import("pdfjs-dist/legacy/build/pdf.mjs");
 
-let pdfjsPromise: Promise<PdfJs> | null = null;
+let pdfjsPromise: Promise<{ pdfjs: PdfJs; worker: InstanceType<PdfJs["PDFWorker"]> }> | null = null;
 
 // 모바일(특히 안드로이드)은 iframe 안에서 PDF를 표시하지 못하므로 pdf.js로 캔버스에 그린다
 function loadPdfJs() {
   pdfjsPromise ??= import("pdfjs-dist/legacy/build/pdf.mjs").then((pdfjs) => {
     pdfjs.GlobalWorkerOptions.workerSrc = `${BASE_PATH}/pdf.worker.min.mjs`;
-    return pdfjs;
+    // 워커(약 1.2MB)는 한 번만 띄워 모든 미리보기에서 재사용한다
+    return { pdfjs, worker: new pdfjs.PDFWorker() };
   });
   return pdfjsPromise;
 }
@@ -19,8 +20,9 @@ export function drawPdfPage(blob: Blob, canvas: HTMLCanvasElement, cssWidth: num
   let cancelRender = () => {};
 
   const done = (async () => {
-    const pdfjs = await loadPdfJs();
-    const doc = await pdfjs.getDocument({ data: new Uint8Array(await blob.arrayBuffer()) }).promise;
+    const { pdfjs, worker } = await loadPdfJs();
+    // worker 를 직접 넘기면 문서를 닫아도 워커는 종료되지 않는다
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(await blob.arrayBuffer()), worker }).promise;
     try {
       if (cancelled) return;
       const page = await doc.getPage(1);
